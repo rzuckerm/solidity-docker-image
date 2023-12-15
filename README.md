@@ -48,7 +48,15 @@ the `<program_name>` directory:
 
 - Start the server with `ganache --detach`, and save off the server name (`<server_name>`)
 - Run the migrations with `truffle migrate --compile-none --quiet`
-- Run the `<program_name>` contract with `truffle call <program_name> <args_string>`
+- Run the `<program_name>` contract with `truffle call <program_name> <args_string>`, decode
+  the output, and display the results of the decode. For example, if this is the output,
+  ```
+  Returned values: (
+    "Hello, world!\n" (type: string)
+  )
+  ```
+
+  then, `"Hello, world!\n"` is output
 - Stop the server with `ganache instances stop <server_name>`
 
 where:
