@@ -15,7 +15,7 @@ The docker image can be found [here](https://hub.docker.com/r/rzuckerm/solidity)
 
 ## Structure of Program
 
-The struction of the program is expected to be this:
+The structure of the program is expected to be this:
 
 ```solidity
 // SPDX-License-Identifier: MIT
