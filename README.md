@@ -12,3 +12,48 @@ where:
 - `<tag>` is the current GitHub tag without the "v"
 
 The docker image can be found [here](https://hub.docker.com/r/rzuckerm/solidity).
+
+## Structure of Program
+
+The struction of the program is expected to be this:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8;
+
+contract <program_name> {
+    function main (string memory args) public pure returns (...) {
+        ...
+    }
+}
+```
+
+where:
+
+- `<program_name>` is the filename without extension
+
+## Compiling
+
+To compile the program run `compile_solidity <program_name>.sol`. This does the following:
+
+- Create a directory called `<program_name>`
+- In directory `<program_name>`, run `truffle init`
+- Copy the `<program_name>.sol` to `<program_name>/contracts`
+- Create a migration script in `<program_name>/migrations`
+
+## Running
+
+To run the program run `run_solidity <program_name> <args>`. This does the following in
+the `<program_name>` directory:
+
+- Start the server with `ganache --detach`, and save off the server name (`<server_name>`)
+- Run the migrations with `truffle migrate --compile-none --quiet`
+- Run the `<program_name>` contract with `truffle call <program_name> <args_string>`
+- Stop the server with `ganache instances stop <server_name>`
+
+where:
+
+- `<args>` are the command-line arguments
+- `<args_string>` is a concatenation of each arguments terminated with a null. For example,
+  if `<args>` is `hello world`, then `<args_string>` is `hello\0world\0`, where `\0` is the
+  null character (ASCII 0)
