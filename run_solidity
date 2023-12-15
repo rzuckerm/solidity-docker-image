@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+import ast
+import re
+import subprocess
+import sys
+from typing import List
+
+ESCAPE_PATTERN = re.compile("\x1b\[\\d+m(.*)\x1b\[\\d+m$")
+
+
+def start_server(dirname: str) -> str:
+    server_name = subprocess.run(
+        ["ganache", "--detach"], cwd=dirname, stdout=subprocess.PIPE, encoding="utf-8", check=True
+    ).stdout.strip()
+    subprocess.run(["truffle", "migrate", "--compile-none", "--quiet"], cwd=dirname, check=True)
+    return server_name
+
+
+def run_contract(dirname: str, args: List[str]) -> str:
+    args_string = "".join(f"{arg}\0" for arg in args)
+    contract_name = dirname.replace("-", "_")
+    output = subprocess.run(
+        ["truffle", "call", contract_name, "main", args_string],
+        stdout=subprocess.PIPE,
+        cwd=dirname,
+        encoding="utf-8",
+        check=True,
+    ).stdout
+    return decode_output(output)
+
+
+def decode_output(output: str) -> str:
+    found = False
+    result = ""
+    for line in output.splitlines():
+        line = line.strip()
+        if not found:
+            if line == "Returned values: (":
+                found = True
+        else:
+            if line == ")":
+                break
+
+            result += decode_value(line)
+
+    return result
+
+
+def remove_escape_codes(value: str) -> str:
+    match = ESCAPE_PATTERN.fullmatch(value)
+    if match:
+        return match.group(1)
+
+    return value
+
+
+def decode_value(value: str) -> str:
+    for pattern, func in DECODE_VALUE_FUNC_TABLE.items():
+        match = re.search(rf" \(type: {pattern}\)$", value)
+        if match:
+            value = remove_escape_codes(value[: -len(match.group(0))])
+            return str(func(value))
+
+
+def decode_bool(value: str) -> str:
+    value = value.lower()
+    if value:
+        return "true"
+
+    return "false"
+
+
+DECODE_VALUE_FUNC_TABLE = {
+    "string": ast.literal_eval,
+    r"u?int\d?": int,
+    "bool": decode_bool,
+}
+
+def stop_server(dirname: str, server_name: str):
+    subprocess.run(
+        ["ganache", "instances", "stop", server_name],
+        cwd=dirname,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+
+
+def main():
+    dirname = sys.argv[1]
+    server_name = start_server(dirname)
+    try:
+        output = run_contract(dirname, sys.argv[2:])
+        print(output, end="")
+    finally:
+        stop_server(dirname, server_name)
+
+
+if __name__ == "__main__":
+    main()

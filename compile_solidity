@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+
+
+def init_project(program_name: str, dirname: str):
+    shutil.rmtree(dirname, ignore_errors=True)
+    Path(dirname).mkdir(parents=True, exist_ok=True)
+    subprocess.run(["truffle", "init"], cwd=dirname, check=True)
+    shutil.copy(program_name, Path(dirname) / "contracts" / program_name)
+    uncomment_development_network(dirname)
+
+
+def uncomment_development_network(dirname: str):
+    truffle_config = Path(dirname) / "truffle-config.js"
+    contents = truffle_config.read_text(encoding="utf-8").splitlines()
+    found = False
+    for index, line in enumerate(contents):
+        if not found:
+            if "// development: {" in line:
+                found = True
+
+        if found:
+            if "{" in line or "}" in line:
+                contents[index] = line.replace("// ", "", 1)
+            else:
+                contents[index] = line.replace("//", "", 1)
+
+            if "}" in line:
+                break
+
+    truffle_config.write_text("\n".join(contents), encoding="utf-8")
+
+
+def compile_project(dirname: str):
+    subprocess.run(["truffle", "compile"], cwd=dirname, check=True)
+
+
+def create_migration(dirname: str):
+    contract_name = dirname.replace("-", "_")
+    migration_js = f"""\
+const {contract_name} = artifacts.require("{contract_name}");
+
+module.exports = function(deployer) {{
+    deployer.deploy({contract_name});
+}}
+"""
+    migration = Path(dirname) / "migrations" / "1_deploy_contracts.js"
+    migration.write_text(migration_js, encoding="utf-8")
+
+
+def main():
+    program_name = sys.argv[1]
+    dirname = Path(program_name).stem
+    init_project(program_name, dirname)
+    compile_project(dirname)
+    create_migration(dirname)
+
+
+if __name__ == "__main__":
+    main()
