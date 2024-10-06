@@ -6,7 +6,7 @@ import subprocess
 import sys
 from typing import List
 
-ESCAPE_PATTERN = re.compile("\x1b\[\\d+m(.*)\x1b\[\\d+m$")
+ESCAPE_PATTERN = re.compile("\x1b\[\\d+m")
 
 
 def start_server(dirname: str) -> str:
@@ -33,6 +33,7 @@ def run_contract(dirname: str, args: List[str]) -> str:
 def decode_output(output: str) -> str:
     found = False
     result = ""
+    output = ESCAPE_PATTERN.sub("", output.replace(" +\n", ""))
     for line in output.splitlines():
         line = line.strip()
         if not found:
@@ -47,19 +48,11 @@ def decode_output(output: str) -> str:
     return result
 
 
-def remove_escape_codes(value: str) -> str:
-    match = ESCAPE_PATTERN.fullmatch(value)
-    if match:
-        return match.group(1)
-
-    return value
-
-
 def decode_value(value: str) -> str:
     for pattern, func in DECODE_VALUE_FUNC_TABLE.items():
         match = re.search(rf" \(type: {pattern}\)$", value)
         if match:
-            value = remove_escape_codes(value[: -len(match.group(0))])
+            value = value[: -len(match.group(0))]
             return str(func(value))
 
 
